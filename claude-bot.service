@@ -1,0 +1,43 @@
+# Systemd service for Claude Code Telegram Bot
+#
+# Installation:
+#   1. Edit this file: replace YOUR_USER and paths below
+#   2. sudo cp claude-bot.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable --now claude-bot
+#
+# Logs: sudo journalctl -u claude-bot -f
+
+[Unit]
+Description=Claude Code Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/path/to/claude-telegram-bot
+ExecStart=/usr/bin/python3 /path/to/claude-telegram-bot/bot.py
+Restart=always
+RestartSec=5
+
+# Adjust PATH to include claude CLI location
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=%h
+
+# Uncomment if you use a proxy for Claude API:
+# Environment=HTTP_PROXY=http://127.0.0.1:8118
+# Environment=HTTPS_PROXY=http://127.0.0.1:8118
+# Environment=NO_PROXY=localhost,127.0.0.1,api.telegram.org
+
+# Or set config via env vars instead of config.yaml:
+# Environment=TELEGRAM_BOT_TOKEN=your_token_here
+# Environment=ALLOWED_USER_IDS=123456789
+# Environment=PROJECTS_ROOT=/home/user/projects
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=claude-bot
+
+[Install]
+WantedBy=multi-user.target

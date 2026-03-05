@@ -1,0 +1,43 @@
+# Copy this file to config.yaml and fill in your values.
+# All settings can also be set via environment variables.
+
+# Telegram Bot Token (required)
+# Get it from @BotFather
+# Env: TELEGRAM_BOT_TOKEN
+telegram_bot_token: ""
+
+# Allowed Telegram user IDs (required)
+# Get yours from @userinfobot
+# Env: ALLOWED_USER_IDS (comma-separated: "123,456")
+allowed_user_ids:
+  - 0
+
+# Path to Claude Code CLI (auto-detected if not set)
+# Env: CLAUDE_CLI_PATH
+# claude_cli_path: "claude"
+
+# Permission mode for Claude Code
+# Options: default, acceptEdits, bypassPermissions, plan
+permission_mode: "bypassPermissions"
+
+# Tools available to Claude
+allowed_tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+
+# Max budget per request (USD)
+max_budget_usd: 5.0
+
+# Root directory for project browsing
+# Env: PROJECTS_ROOT
+# projects_root: "~/projects"
+
+# Max folder depth in browser
+max_depth: 5
+
+# Telegram message length limit (max 4096)
+max_message_length: 4000
