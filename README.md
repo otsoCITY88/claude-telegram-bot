@@ -33,28 +33,22 @@ cd claude-telegram-bot
 bash install.sh
 ```
 
-Скрипт установит зависимости и создаст `config.yaml`. Отредактируйте его:
+Установщик сделает всё сам:
+1. Проверит зависимости (Python, Claude CLI, ffmpeg)
+2. Установит Python-пакеты
+3. Спросит **Telegram Bot Token** (подскажет где взять)
+4. Спросит **User ID** (подскажет где узнать)
+5. Спросит **папку с проектами**
+6. Предложит установить **systemd сервис** (автозапуск)
+7. Запустит бота
 
-```bash
-nano config.yaml
-```
+Никакие файлы вручную редактировать не нужно.
 
-Обязательные поля:
-- `telegram_bot_token` — токен от @BotFather
-- `allowed_user_ids` — ваш Telegram ID (узнать: [@userinfobot](https://t.me/userinfobot))
+### Подготовка в Telegram (перед установкой)
 
-Запуск:
-
-```bash
-python3 bot.py
-```
-
-## Настройка бота в Telegram
-
-1. Откройте [@BotFather](https://t.me/BotFather)
-2. Включите **Threaded Mode** для бота (нужно для топиков в личном чате)
-3. Напишите боту `/start`
-4. Создайте первый проект: `/addproject`
+1. Откройте [@BotFather](https://t.me/BotFather) → `/newbot` → получите токен
+2. Там же: **Bot Settings → Topics in Private Chats → Enable**
+3. Узнайте свой ID: напишите [@userinfobot](https://t.me/userinfobot)
 
 ## Команды бота
 
