@@ -3,6 +3,7 @@ import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+from i18n import t
 from utils.auth import authorized_only
 
 
@@ -34,8 +35,8 @@ def _build_keyboard(
         )
 
     action_row: list[InlineKeyboardButton] = [
-        InlineKeyboardButton("📁+ Новая папка", callback_data=f"mkdir:{mode}"),
-        InlineKeyboardButton("✅ Выбрать эту", callback_data=f"sel:{mode}"),
+        InlineKeyboardButton(f"📁+ {t('new_folder_btn')}", callback_data=f"mkdir:{mode}"),
+        InlineKeyboardButton(f"✅ {t('select_btn')}", callback_data=f"sel:{mode}"),
     ]
     buttons.append(action_row)
 
@@ -44,7 +45,7 @@ def _build_keyboard(
         idx = str(len(path_map))
         path_map[idx] = parent
         buttons.append(
-            [InlineKeyboardButton("⬆ Назад", callback_data=f"br:{mode}:{idx}")]
+            [InlineKeyboardButton(f"⬆ {t('back_btn')}", callback_data=f"br:{mode}:{idx}")]
         )
 
     return InlineKeyboardMarkup(buttons)
@@ -58,7 +59,7 @@ async def addproject_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data.pop("awaiting_folder_name", None)
     kb = _build_keyboard(config.projects_root, context, mode="add")
     await update.message.reply_text(
-        f"Обзор: <code>{config.projects_root}</code>", reply_markup=kb, parse_mode="HTML"
+        t("browse", path=config.projects_root), reply_markup=kb, parse_mode="HTML"
     )
 
 
@@ -66,7 +67,7 @@ async def addproject_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def setproject_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика.")
+        await update.message.reply_text(t("use_in_topic_setproject"))
         return
     config = context.bot_data["config"]
     context.user_data["browse_path"] = config.projects_root
@@ -75,7 +76,7 @@ async def setproject_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data.pop("awaiting_folder_name", None)
     kb = _build_keyboard(config.projects_root, context, mode="set")
     await update.message.reply_text(
-        f"Обзор: <code>{config.projects_root}</code>", reply_markup=kb, parse_mode="HTML"
+        t("browse", path=config.projects_root), reply_markup=kb, parse_mode="HTML"
     )
 
 
@@ -93,21 +94,20 @@ async def browse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         idx = parts[2]
         new_path = context.user_data["path_map"].get(idx)
         if not new_path or not os.path.isdir(new_path):
-            await query.edit_message_text("Папка не найдена.")
+            await query.edit_message_text(t("folder_not_found"))
             return
         context.user_data["browse_path"] = new_path
         context.user_data.pop("awaiting_folder_name", None)
         kb = _build_keyboard(new_path, context, mode)
         await query.edit_message_text(
-            f"Обзор: <code>{new_path}</code>", reply_markup=kb, parse_mode="HTML"
+            t("browse", path=new_path), reply_markup=kb, parse_mode="HTML"
         )
 
     elif action == "mkdir":
         current = context.user_data.get("browse_path", "")
         context.user_data["awaiting_folder_name"] = mode
         await query.edit_message_text(
-            f"📁 Создание папки в:\n<code>{current}</code>\n\n"
-            "Введи название новой папки:",
+            f"📁 <code>{current}</code>\n\n{t('enter_folder_name')}",
             parse_mode="HTML",
         )
 
@@ -125,29 +125,23 @@ async def browse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 thread_id = topic.message_thread_id
             except Exception as e:
-                await query.edit_message_text(
-                    f"Не удалось создать топик: {e}\n\n"
-                    "Убедись что Threaded Mode включён в @BotFather."
-                )
+                await query.edit_message_text(t("topic_create_error", error=str(e)))
                 return
             session_store.set_project(thread_id, selected)
             await query.edit_message_text(
-                f"✅ Топик <b>{folder_name}</b> создан!\n"
-                f"Путь: <code>{selected}</code>\n\n"
-                "Открой новый топик и начинай общаться с Claude.",
+                f"✅ {t('project_created', folder=folder_name, path=selected)}",
                 parse_mode="HTML",
             )
 
         elif mode == "set":
             thread_id = context.user_data.get("set_thread_id")
             if not thread_id:
-                await query.edit_message_text("Не удалось определить топик.")
+                await query.edit_message_text(t("cant_detect_topic"))
                 return
             session_store.set_project(thread_id, selected)
             folder_name = os.path.basename(selected)
             await query.edit_message_text(
-                f"✅ Топик привязан к <b>{folder_name}</b>\n"
-                f"Путь: <code>{selected}</code>",
+                f"✅ {t('project_bound', folder=folder_name, path=selected)}",
                 parse_mode="HTML",
             )
 
@@ -163,28 +157,25 @@ async def handle_folder_name(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data.pop("awaiting_folder_name", None)
 
     if not folder_name or "/" in folder_name or folder_name.startswith("."):
-        await update.message.reply_text(
-            "Неверное имя папки. Без слешей и точек в начале. Попробуй /addproject заново."
-        )
+        await update.message.reply_text(t("bad_folder_name"))
         return True
 
     new_path = os.path.join(parent, folder_name)
 
     if os.path.exists(new_path):
         await update.message.reply_text(
-            f"Папка <code>{folder_name}</code> уже существует. Захожу в неё.",
-            parse_mode="HTML",
+            t("folder_exists", name=folder_name), parse_mode="HTML"
         )
     else:
         try:
             os.makedirs(new_path, exist_ok=True)
         except OSError as e:
-            await update.message.reply_text(f"Не удалось создать папку: {e}")
+            await update.message.reply_text(t("folder_create_error", error=str(e)))
             return True
 
     context.user_data["browse_path"] = new_path
     kb = _build_keyboard(new_path, context, mode)
     await update.message.reply_text(
-        f"Обзор: <code>{new_path}</code>", reply_markup=kb, parse_mode="HTML"
+        t("browse", path=new_path), reply_markup=kb, parse_mode="HTML"
     )
     return True

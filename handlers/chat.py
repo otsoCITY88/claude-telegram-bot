@@ -7,6 +7,7 @@ from telegram import Message
 from telegram.ext import ContextTypes
 
 from claude_bridge.runner import run_claude
+from i18n import t
 from utils.auth import authorized_only
 from utils.formatting import claude_to_telegram_html, escape_html
 from utils.message_splitter import split_message
@@ -23,18 +24,13 @@ async def handle_message(update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = message.message_thread_id
 
     if not thread_id:
-        await message.reply_text(
-            "Пиши в топике проекта.\nИспользуй /addproject чтобы создать."
-        )
+        await message.reply_text(t("use_topic"))
         return
 
     session_store = context.bot_data["session_store"]
     info = session_store.get(thread_id)
     if not info:
-        await message.reply_text(
-            "Этот топик не привязан к проекту.\n"
-            "Используй /setproject тут или /addproject для нового."
-        )
+        await message.reply_text(t("topic_not_bound"))
         return
 
     await send_to_claude(message, message.text, context)
@@ -56,12 +52,12 @@ async def send_to_claude(
     show_tools = context.bot_data.get("show_tools", True)
 
     if thread_id in _processing:
-        await message.reply_text("Ещё обрабатываю предыдущий запрос. Подожди.\nИспользуй /cancel чтобы отменить.")
+        await message.reply_text(t("still_processing"))
         return
 
     _processing.add(thread_id)
 
-    thinking = await message.reply_text("🔄 Claude думает...")
+    thinking = await message.reply_text(f"🔄 {t('thinking')}")
 
     start_time = time.monotonic()
     last_edit = start_time
@@ -93,7 +89,7 @@ async def send_to_claude(
         elapsed = int(time.monotonic() - start_time)
         lines = tool_log[-5:]
         tools_text = "\n".join(f"  <code>{escape_html(l)}</code>" for l in lines)
-        await _edit(f"🔄 Работаю... ({elapsed}с)\n\n🔧 <b>Тулы:</b>\n{tools_text}")
+        await _edit(f"🔄 {t('working', elapsed=elapsed)}\n\n🔧 <b>{t('tools_label')}</b>\n{tools_text}")
 
     async def _on_text(accumulated: str):
         nonlocal streaming_active
@@ -102,7 +98,7 @@ async def send_to_claude(
         if len(accumulated) > 300:
             preview = "..." + preview
         elapsed = int(time.monotonic() - start_time)
-        await _edit(f"💬 Пишу ответ... ({elapsed}с)\n\n{escape_html(preview)}")
+        await _edit(f"💬 {t('writing', elapsed=elapsed)}\n\n{escape_html(preview)}")
 
     async def _on_intermediate(text: str):
         nonlocal streaming_active
@@ -121,9 +117,9 @@ async def send_to_claude(
             if show_tools and tool_log:
                 lines = tool_log[-5:]
                 tools_text = "\n".join(f"  <code>{escape_html(l)}</code>" for l in lines)
-                await _edit(f"🔄 Работаю... ({elapsed}с)\n\n🔧 <b>Тулы:</b>\n{tools_text}")
+                await _edit(f"🔄 {t('working', elapsed=elapsed)}\n\n🔧 <b>{t('tools_label')}</b>\n{tools_text}")
             else:
-                await _edit(f"🔄 Claude работает... ({elapsed}с)")
+                await _edit(f"🔄 {t('claude_working', elapsed=elapsed)}")
 
     ticker = asyncio.create_task(_tick())
 
@@ -149,12 +145,12 @@ async def send_to_claude(
             pass
 
         if show_tools and result.tools_used:
-            tools_text = "\n".join(f"  <code>{escape_html(t)}</code>" for t in result.tools_used)
+            tools_text = "\n".join(f"  <code>{escape_html(s)}</code>" for s in result.tools_used)
             if len(tools_text) > config.max_message_length - 100:
                 tools_text = tools_text[: config.max_message_length - 120] + "\n  ..."
             await _safe_send(
                 message,
-                f"🔧 <b>Использовано тулов ({len(result.tools_used)}):</b>\n{tools_text}",
+                f"🔧 <b>{t('tools_used', count=len(result.tools_used))}</b>\n{tools_text}",
             )
 
         formatted = claude_to_telegram_html(result.text)
@@ -167,9 +163,7 @@ async def send_to_claude(
             for chunk in chunks[:3]:
                 await _safe_send(message, chunk)
             await _send_as_file(message, result.text, "response.txt")
-            await message.reply_text(
-                f"(Ответ: {len(result.text)} символов — полный текст в файле выше)"
-            )
+            await message.reply_text(t("response_file", chars=len(result.text)))
 
         if result.cost_usd is not None:
             await message.reply_text(
@@ -178,9 +172,9 @@ async def send_to_claude(
             )
 
     except Exception as e:
-        log.exception("Ошибка в обработчике чата")
+        log.exception("Chat handler error")
         try:
-            await thinking.edit_text(f"Ошибка: {str(e)[:500]}")
+            await thinking.edit_text(t("chat_error", error=str(e)[:500]))
         except Exception:
             pass
     finally:

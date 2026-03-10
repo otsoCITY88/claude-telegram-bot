@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 
 from claude_bridge.runner import _kill_tree, get_active_proc
 from claude_bridge.session_store import SessionStore
+from i18n import t
 from utils.auth import authorized_only
 
 
@@ -12,20 +13,19 @@ from utils.auth import authorized_only
 async def new_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика проекта.")
+        await update.message.reply_text(t("use_in_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
     info = session_store.get(thread_id)
     if not info:
-        await update.message.reply_text("Этот топик не привязан к проекту.")
+        await update.message.reply_text(t("not_bound"))
         return
 
     session_store.clear_session(thread_id)
     folder = os.path.basename(info.project_path)
     await update.message.reply_text(
-        f"🔄 Новая сессия для <b>{folder}</b>.\nПиши первое сообщение.",
-        parse_mode="HTML",
+        f"🔄 {t('new_session', folder=folder)}", parse_mode="HTML"
     )
 
 
@@ -33,25 +33,23 @@ async def new_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика проекта.")
+        await update.message.reply_text(t("use_in_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
     info = session_store.get(thread_id)
     if not info:
-        await update.message.reply_text("Этот топик не привязан к проекту.")
+        await update.message.reply_text(t("not_bound"))
         return
 
     sid = info.session_id
-    sid_display = f"<code>{sid[:16]}...</code>" if sid else "нет"
+    sid_display = f"<code>{sid[:16]}...</code>" if sid else t("none")
     folder = os.path.basename(info.project_path)
-    model_display = info.model or "по умолчанию"
+    model_display = info.model or t("no_model")
 
     await update.message.reply_text(
-        f"<b>Проект:</b> {folder}\n"
-        f"<b>Путь:</b> <code>{info.project_path}</code>\n"
-        f"<b>Модель:</b> {model_display}\n"
-        f"<b>Сессия:</b> {sid_display}",
+        t("status_project", folder=folder, path=info.project_path,
+          model=model_display, session=sid_display),
         parse_mode="HTML",
     )
 
@@ -60,18 +58,18 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def sessions_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика проекта.")
+        await update.message.reply_text(t("use_in_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
     info = session_store.get(thread_id)
     if not info:
-        await update.message.reply_text("Этот топик не привязан к проекту.")
+        await update.message.reply_text(t("not_bound"))
         return
 
     sessions = SessionStore.list_sessions(info.project_path)
     if not sessions:
-        await update.message.reply_text("Сессий для этого проекта не найдено.")
+        await update.message.reply_text(t("no_sessions"))
         return
 
     sess_map: dict[str, str] = {}
@@ -95,11 +93,11 @@ async def sessions_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     folder = os.path.basename(info.project_path)
     current = info.session_id
-    current_display = f"\nАктивная: <code>{current[:12]}...</code>" if current else ""
+    current_display = t("sessions_active", sid=current[:12]) if current else ""
+    header = t("sessions_title", folder=folder, current=current_display)
 
     await update.message.reply_text(
-        f"<b>Сессии {folder}</b>{current_display}\n\n"
-        "Выбери сессию для продолжения:",
+        f"{header}\n\n{t('pick_session')}",
         reply_markup=InlineKeyboardMarkup(buttons),
         parse_mode="HTML",
     )
@@ -114,28 +112,27 @@ async def session_pick_callback(update: Update, context: ContextTypes.DEFAULT_TY
     sess_map: dict[str, str] = context.user_data.get("sess_map", {})
     session_id = sess_map.get(idx)
     if not session_id:
-        await query.edit_message_text("Сессия не найдена. Попробуй /sessions заново.")
+        await query.edit_message_text(t("session_not_found"))
         return
 
     thread_id = query.message.message_thread_id
     if not thread_id:
-        await query.edit_message_text("Не удалось определить топик.")
+        await query.edit_message_text(t("cant_detect_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
     session_store.set_session_id(thread_id, session_id)
 
     await query.edit_message_text(
-        f"✅ Продолжаем сессию <code>{session_id[:12]}...</code>\n"
-        "Пиши сообщение.",
+        f"✅ {t('session_resumed', sid=session_id[:12])}",
         parse_mode="HTML",
     )
 
 
 MODELS = [
-    ("sonnet", "Sonnet — быстрый и дешёвый"),
-    ("opus", "Opus — самый умный"),
-    ("haiku", "Haiku — самый быстрый"),
+    ("sonnet", "model_sonnet"),
+    ("opus", "model_opus"),
+    ("haiku", "model_haiku"),
 ]
 
 
@@ -143,31 +140,31 @@ MODELS = [
 async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика проекта.")
+        await update.message.reply_text(t("use_in_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
     info = session_store.get(thread_id)
     if not info:
-        await update.message.reply_text("Этот топик не привязан к проекту.")
+        await update.message.reply_text(t("not_bound"))
         return
 
-    current = info.model or "по умолчанию"
+    current = info.model or t("no_model")
     buttons = []
-    for alias, desc in MODELS:
+    for alias, desc_key in MODELS:
         mark = " ✓" if alias == info.model else ""
         buttons.append(
-            [InlineKeyboardButton(f"{desc}{mark}", callback_data=f"model:{alias}")]
+            [InlineKeyboardButton(f"{t(desc_key)}{mark}", callback_data=f"model:{alias}")]
         )
     buttons.append(
         [InlineKeyboardButton(
-            f"🔄 Сбросить (по умолчанию){'  ✓' if not info.model else ''}",
+            f"🔄 {t('model_reset_label')}{'  ✓' if not info.model else ''}",
             callback_data="model:reset",
         )]
     )
 
     await update.message.reply_text(
-        f"<b>Текущая модель:</b> {current}\n\nВыбери модель для этого проекта:",
+        t("model_current", model=current),
         reply_markup=InlineKeyboardMarkup(buttons),
         parse_mode="HTML",
     )
@@ -181,21 +178,20 @@ async def model_pick_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     choice = query.data.split(":")[1]
     thread_id = query.message.message_thread_id
     if not thread_id:
-        await query.edit_message_text("Не удалось определить топик.")
+        await query.edit_message_text(t("cant_detect_topic"))
         return
 
     session_store: SessionStore = context.bot_data["session_store"]
 
     if choice == "reset":
         session_store.set_model(thread_id, None)
-        await query.edit_message_text(
-            "✅ Модель сброшена — будет использоваться модель по умолчанию.",
-        )
+        await query.edit_message_text(f"✅ {t('model_reset_done')}")
     else:
         session_store.set_model(thread_id, choice)
-        desc = dict(MODELS).get(choice, choice)
+        desc_key = dict(MODELS).get(choice, "")
+        desc = t(desc_key) if desc_key else choice
         await query.edit_message_text(
-            f"✅ Модель: <b>{desc}</b>",
+            f"✅ {t('model_set', desc=desc)}",
             parse_mode="HTML",
         )
 
@@ -204,21 +200,23 @@ async def model_pick_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def tools_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current = context.bot_data.get("show_tools", True)
     context.bot_data["show_tools"] = not current
-    state = "ВКЛ" if not current else "ВЫКЛ"
-    await update.message.reply_text(f"🔧 Отображение тулов: <b>{state}</b>", parse_mode="HTML")
+    state = t("tools_on") if not current else t("tools_off")
+    await update.message.reply_text(
+        f"🔧 {t('tools_toggle', state=state)}", parse_mode="HTML"
+    )
 
 
 @authorized_only
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thread_id = update.message.message_thread_id
     if not thread_id:
-        await update.message.reply_text("Используй эту команду внутри топика проекта.")
+        await update.message.reply_text(t("use_in_topic"))
         return
 
     proc = get_active_proc(thread_id)
     if not proc:
-        await update.message.reply_text("Сейчас ничего не выполняется.")
+        await update.message.reply_text(t("nothing_running"))
         return
 
     _kill_tree(proc)
-    await update.message.reply_text("🛑 Запрос отменён.")
+    await update.message.reply_text(f"🛑 {t('cancelled')}")

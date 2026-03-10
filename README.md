@@ -1,31 +1,34 @@
 # Claude Code Telegram Bot
 
-Telegram-бот для работы с [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) прямо с телефона. Каждый проект — отдельный топик (тред) в чате с ботом.
+[Русская версия](README_RU.md)
 
-Claude Code выполняет реальные задачи: пишет и редактирует код, запускает команды, работает с файлами в ваших проектах.
+Telegram bot for working with [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) right from your phone. Each project lives in a separate topic (thread) in your bot chat.
 
-## Возможности
+Claude Code performs real tasks: writes and edits code, runs commands, works with files in your projects.
 
-- **Топики = проекты** — каждый проект в отдельном треде, удобная навигация
-- **Файловый менеджер** — выбор проекта через inline-кнопки, создание новых папок
-- **Стриминг ответов** — видно что Claude думает и какие тулы использует в реальном времени
-- **Промежуточные сообщения** — текст между вызовами тулов отправляется как отдельные сообщения
-- **Выбор модели** — переключение между Sonnet / Opus / Haiku per-project
-- **Сессии** — продолжение любой предыдущей сессии Claude Code
-- **Фото и файлы** — отправь файл в чат, Claude его прочитает и проанализирует
-- **Голосовые** — speech-to-text (Google STT) → текст отправляется в Claude
-- **Форматирование** — Markdown и HTML Claude конвертируются в Telegram HTML
-- **Мульти-юзер** — whitelist по Telegram user ID
-- **Автозапуск** — systemd сервис с автоперезапуском
+## Features
 
-## Требования
+- **Topics = projects** — each project in a separate thread, easy navigation
+- **File manager** — choose a project folder via inline buttons, create new folders
+- **Response streaming** — see what Claude is thinking and which tools it uses in real time
+- **Intermediate messages** — text between tool calls is sent as separate messages
+- **Model selection** — switch between Sonnet / Opus / Haiku per-project
+- **Sessions** — resume any previous Claude Code session
+- **Photos and files** — send a file in chat, Claude will read and analyze it
+- **Voice messages** — speech-to-text (Google STT) → text is sent to Claude
+- **Formatting** — Claude's Markdown and HTML are converted to Telegram HTML
+- **Multi-user** — whitelist by Telegram user ID
+- **i18n** — English and Russian interface
+- **Auto-start** — systemd service with auto-restart
+
+## Requirements
 
 - Python 3.10+
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) (установлен и авторизован)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) (installed and authorized)
 - Telegram Bot Token ([@BotFather](https://t.me/BotFather))
-- ffmpeg (опционально, для голосовых сообщений)
+- ffmpeg (optional, for voice messages)
 
-## Быстрый старт
+## Quick Start
 
 ```bash
 git clone https://github.com/otsoCITY88/claude-telegram-bot.git
@@ -33,92 +36,95 @@ cd claude-telegram-bot
 bash install.sh
 ```
 
-Установщик сделает всё сам:
-1. Проверит зависимости (Python, Claude CLI, ffmpeg)
-2. Установит Python-пакеты
-3. Спросит **Telegram Bot Token** (подскажет где взять)
-4. Спросит **User ID** (подскажет где узнать)
-5. Спросит **папку с проектами**
-6. Предложит установить **systemd сервис** (автозапуск)
-7. Запустит бота
+The installer does everything:
+1. Checks dependencies (Python, Claude CLI, ffmpeg)
+2. Installs Python packages
+3. Asks for **Telegram Bot Token** (tells you where to get it)
+4. Asks for **User ID** (tells you where to find it)
+5. Asks for **projects folder**
+6. Asks for **interface language** (English / Russian)
+7. Offers to install a **systemd service** (auto-start)
+8. Starts the bot
 
-Никакие файлы вручную редактировать не нужно.
+No manual file editing needed.
 
-### Подготовка в Telegram (перед установкой)
+### Telegram Setup (before installation)
 
-1. Откройте [@BotFather](https://t.me/BotFather) → `/newbot` → получите токен
-2. Там же: **Bot Settings → Topics in Private Chats → Enable**
-3. Узнайте свой ID: напишите [@userinfobot](https://t.me/userinfobot)
+1. Open [@BotFather](https://t.me/BotFather) → `/newbot` → get your token
+2. In BotFather: **Bot Settings → Topics in Private Chats → Enable**
+3. Find your ID: message [@userinfobot](https://t.me/userinfobot)
 
-## Команды бота
+## Bot Commands
 
-| Команда | Описание |
+| Command | Description |
 |---|---|
-| `/addproject` | Выбрать папку и создать топик проекта |
-| `/setproject` | Привязать существующий топик к папке |
-| `/sessions` | Список сессий, продолжить любую |
-| `/new` | Начать новую сессию Claude |
-| `/cancel` | Прервать текущий запрос |
-| `/model` | Выбрать модель (Sonnet/Opus/Haiku) |
-| `/status` | Инфо о проекте и сессии |
-| `/tools` | Вкл/выкл отображение тулов |
+| `/addproject` | Browse folders and create a project topic |
+| `/setproject` | Bind an existing topic to a folder |
+| `/sessions` | List sessions, resume any |
+| `/new` | Start a new Claude session |
+| `/cancel` | Cancel current request |
+| `/model` | Choose model (Sonnet/Opus/Haiku) |
+| `/status` | Project and session info |
+| `/tools` | Toggle tool display |
 
-## Конфигурация
+## Configuration
 
-Через `config.yaml` или переменные окружения:
+Via `config.yaml` or environment variables:
 
-| Параметр | Env | По умолчанию | Описание |
+| Parameter | Env | Default | Description |
 |---|---|---|---|
-| `telegram_bot_token` | `TELEGRAM_BOT_TOKEN` | — | Токен бота |
-| `allowed_user_ids` | `ALLOWED_USER_IDS` | — | Список Telegram user ID |
-| `claude_cli_path` | `CLAUDE_CLI_PATH` | auto | Путь к Claude CLI |
-| `projects_root` | `PROJECTS_ROOT` | `~/projects` | Корневая папка проектов |
-| `permission_mode` | — | `bypassPermissions` | Режим разрешений Claude |
-| `max_budget_usd` | — | `5.0` | Лимит бюджета на запрос |
-| `max_depth` | — | `5` | Глубина файлового менеджера |
-| `max_message_length` | — | `4000` | Макс. длина сообщения |
+| `telegram_bot_token` | `TELEGRAM_BOT_TOKEN` | — | Bot token |
+| `allowed_user_ids` | `ALLOWED_USER_IDS` | — | List of Telegram user IDs |
+| `claude_cli_path` | `CLAUDE_CLI_PATH` | auto | Path to Claude CLI |
+| `projects_root` | `PROJECTS_ROOT` | `~/projects` | Root folder for projects |
+| `permission_mode` | — | `bypassPermissions` | Claude permission mode |
+| `max_budget_usd` | — | `5.0` | Budget limit per request |
+| `max_depth` | — | `5` | File manager depth |
+| `max_message_length` | — | `4000` | Max message length |
+| `language` | — | `en` | Interface language (`en` / `ru`) |
 
-## Автозапуск (systemd)
+## Auto-start (systemd)
 
 ```bash
-# Отредактируйте сервис (User и пути)
+# Edit the service file (User and paths)
 nano claude-bot.service
 
-# Установите
+# Install
 sudo cp claude-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now claude-bot
 
-# Проверьте
+# Check
 sudo systemctl status claude-bot
 sudo journalctl -u claude-bot -f
 ```
 
-## Структура проекта
+## Project Structure
 
 ```
 claude-telegram-bot/
-├── bot.py                  # Точка входа, регистрация хендлеров
-├── config.py               # Конфигурация (dataclass + yaml + env)
-├── config.yaml.example     # Шаблон конфигурации
-├── requirements.txt        # Python зависимости
-├── install.sh              # Скрипт установки
-├── claude-bot.service      # Systemd сервис
+├── bot.py                  # Entry point, handler registration
+├── config.py               # Configuration (dataclass + yaml + env)
+├── i18n.py                 # Internationalization (en/ru)
+├── config.yaml.example     # Configuration template
+├── requirements.txt        # Python dependencies
+├── install.sh              # Installation script
+├── claude-bot.service      # Systemd service
 ├── claude_bridge/
-│   ├── runner.py           # Запуск Claude CLI, парсинг stream-json
-│   └── session_store.py    # Хранение topic→project маппинга
+│   ├── runner.py           # Claude CLI launch, stream-json parsing
+│   └── session_store.py    # topic→project mapping storage
 ├── handlers/
 │   ├── start.py            # /start
-│   ├── project.py          # /addproject, /setproject, файловый менеджер
-│   ├── chat.py             # Обработка сообщений, стриминг ответов
+│   ├── project.py          # /addproject, /setproject, file manager
+│   ├── chat.py             # Message handling, response streaming
 │   ├── session.py          # /sessions, /new, /model, /tools, /cancel
-│   └── files.py            # Фото, документы, голосовые
+│   └── files.py            # Photos, documents, voice messages
 └── utils/
-    ├── auth.py             # Проверка доступа по user ID
+    ├── auth.py             # Access check by user ID
     ├── formatting.py       # Markdown+HTML → Telegram HTML
-    └── message_splitter.py # Разбивка длинных сообщений
+    └── message_splitter.py # Long message splitting
 ```
 
-## Лицензия
+## License
 
 MIT

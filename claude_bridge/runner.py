@@ -7,6 +7,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 
 from config import Config
+from i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ async def run_claude(
         _kill_tree(proc)
         await proc.wait()
         return ClaudeResult(
-            text=f"Claude работал больше {_MAX_PROCESS_TIME // 60} мин — процесс остановлен.",
+            text=t("process_timeout", minutes=_MAX_PROCESS_TIME // 60),
             session_id=session_id,
             cost_usd=None,
             is_error=True,
@@ -121,7 +122,7 @@ async def run_claude(
         _kill_tree(proc)
         await proc.wait()
         return ClaudeResult(
-            text="Запрос отменён.",
+            text=t("request_cancelled"),
             session_id=session_id,
             cost_usd=None,
             is_error=True,
@@ -138,10 +139,10 @@ async def run_claude(
         if proc.stderr:
             stderr_bytes = await proc.stderr.read()
             stderr = stderr_bytes.decode(errors="replace").strip()
-        error_text = stderr or f"Код выхода {proc.returncode}"
+        error_text = stderr or t("exit_code", code=proc.returncode)
         log.error("Claude failed: %s", error_text)
         return ClaudeResult(
-            text=f"Ошибка Claude:\n{error_text[:3000]}",
+            text=t("claude_error", error=error_text[:3000]),
             session_id=session_id,
             cost_usd=None,
             is_error=True,
@@ -233,9 +234,9 @@ async def _read_stream(
                             pass
 
                 elif block_type == "text":
-                    t = block.get("text", "")
-                    if t:
-                        text_parts.append(t)
+                    txt = block.get("text", "")
+                    if txt:
+                        text_parts.append(txt)
 
         # --- System init message ---
         elif ev_type == "system":

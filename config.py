@@ -40,6 +40,7 @@ class Config:
     max_depth: int = 5
     sessions_file: str = "sessions.json"
     max_message_length: int = 4000
+    language: str = "en"
 
 
 def load_config(path: str | None = None) -> Config:

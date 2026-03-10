@@ -26,6 +26,7 @@ from handlers.session import (
     tools_toggle,
 )
 from handlers.start import start_command
+from i18n import set_language, t
 
 logging.basicConfig(
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
@@ -33,32 +34,32 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BOT_COMMANDS = [
-    BotCommand("start", "Приветствие и помощь"),
-    BotCommand("addproject", "Выбрать папку и создать топик"),
-    BotCommand("setproject", "Привязать топик к папке"),
-    BotCommand("sessions", "Список сессий для продолжения"),
-    BotCommand("new", "Новая сессия Claude"),
-    BotCommand("cancel", "Прервать текущий запрос"),
-    BotCommand("status", "Инфо о проекте и сессии"),
-    BotCommand("model", "Выбрать модель Claude"),
-    BotCommand("tools", "Вкл/выкл отображение тулов"),
-]
-
 
 async def post_init(application):
-    await application.bot.set_my_commands(BOT_COMMANDS)
-    log.info("Меню команд зарегистрировано (%d команд)", len(BOT_COMMANDS))
+    commands = [
+        BotCommand("start", t("cmd_start")),
+        BotCommand("addproject", t("cmd_addproject")),
+        BotCommand("setproject", t("cmd_setproject")),
+        BotCommand("sessions", t("cmd_sessions")),
+        BotCommand("new", t("cmd_new")),
+        BotCommand("cancel", t("cmd_cancel")),
+        BotCommand("status", t("cmd_status")),
+        BotCommand("model", t("cmd_model")),
+        BotCommand("tools", t("cmd_tools")),
+    ]
+    await application.bot.set_my_commands(commands)
+    log.info("Bot commands registered (%d commands)", len(commands))
 
 
 def main():
     config = load_config()
+    set_language(config.language)
 
     if not config.telegram_bot_token:
-        print("Укажи telegram_bot_token в config.yaml или переменную TELEGRAM_BOT_TOKEN")
+        print(t("err_no_token"))
         sys.exit(1)
     if not config.allowed_user_ids:
-        print("Укажи allowed_user_ids в config.yaml или переменную ALLOWED_USER_IDS")
+        print(t("err_no_users"))
         sys.exit(1)
 
     session_store = SessionStore(config.sessions_file)
@@ -98,7 +99,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_file))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    log.info("Бот запускается (user_ids=%s)", config.allowed_user_ids)
+    log.info("Bot starting (user_ids=%s)", config.allowed_user_ids)
     app.run_polling(drop_pending_updates=True)
 
 

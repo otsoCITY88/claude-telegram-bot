@@ -41,3 +41,6 @@ max_depth: 5
 
 # Telegram message length limit (max 4096)
 max_message_length: 4000
+
+# Bot interface language: "en" or "ru"
+language: "en"
